@@ -1,0 +1,9 @@
+rootProject.name = 'parent'
+includeFlat 'web'
+includeFlat 'service'
+includeFlat 'common'
+includeFlat 'txhw-admin'
+includeFlat 'txhw-app'
+includeFlat 'user-service'
+includeFlat 'assets-service'
+

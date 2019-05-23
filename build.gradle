@@ -1,0 +1,130 @@
+plugins {
+    id 'org.springframework.boot' version '2.1.4.RELEASE'
+    id 'java'
+}
+
+group 'cn.minecos'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'io.spring.dependency-management'
+
+repositories {
+    maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+    maven { url 'http://maven.aliyun.com/nexus/content/repositories/jcenter' }
+    mavenCentral()
+}
+
+task "create-dirs" << {
+    sourceSets*.java.srcDirs*.each{
+        it.mkdirs()
+    }
+    sourceSets*.resources.srcDirs*.each{
+        it.mkdirs()
+    }
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+configurations {
+    mybatisGenerator
+}
+
+def getDbProperties = {
+    def properties = new Properties()
+    file("src/main/resources/mybatis/db-mysql.properties").withInputStream { inputStream ->
+        properties.load(inputStream)
+    }
+    properties;
+}
+
+
+task mybatisGenerate << {
+    def properties = getDbProperties()
+    ant.properties['targetProject'] = projectDir.path
+    ant.properties['driverClass'] = properties.getProperty("jdbc.driverClassName")
+    ant.properties['connectionURL'] = properties.getProperty("jdbc.url")
+    ant.properties['userId'] = properties.getProperty("jdbc.user")
+    ant.properties['password'] = properties.getProperty("jdbc.pass")
+    ant.properties['src_main_java'] = sourceSets.main.java.srcDirs[0].path
+    ant.properties['src_main_resources'] = sourceSets.main.resources.srcDirs[0].path
+    ant.properties['modelPackage'] = properties.getProperty("package.model")
+    ant.properties['mapperPackage'] = properties.getProperty("package.mapper")
+    ant.properties['sqlMapperPackage'] =properties.getProperty("package.xml")
+    ant.taskdef(
+            name: 'mbgenerator',
+            classname: 'org.mybatis.generator.ant.GeneratorAntTask',
+            classpath: configurations.mybatisGenerator.asPath
+    )
+    ant.mbgenerator(overwrite: true,
+            configfile: 'src/main/resources/mybatis/generatorConfig.xml', verbose: true) {
+        propertyset {
+            propertyref(name: 'targetProject')
+            propertyref(name: 'userId')
+            propertyref(name: 'driverClass')
+            propertyref(name: 'connectionURL')
+            propertyref(name: 'password')
+            propertyref(name: 'src_main_java')
+            propertyref(name: 'src_main_resources')
+            propertyref(name: 'modelPackage')
+            propertyref(name: 'mapperPackage')
+            propertyref(name: 'sqlMapperPackage')
+        }
+    }
+}
+
+
+//子模块配置
+subprojects {
+
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: "idea"
+
+    jar { enabled = true }
+    bootJar { enabled = false }
+
+    ext {
+        junitVersion = "4.11"
+        springVersion = "4.3.3.RELEASE"
+        jacksonVersion = "2.4.4"
+        compileJava.options.encoding = 'UTF-8'
+        compileTestJava.options.encoding = 'UTF-8'
+    }
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
+    //配置依赖
+    dependencies {
+        compile(
+                "org.springframework.boot:spring-boot-configuration-processor:2.1.4.RELEASE",
+                "org.springframework.boot:spring-boot-starter:2.1.4.RELEASE",
+                "org.springframework.boot:spring-boot-starter-web:2.1.4.RELEASE",
+                "com.alibaba:fastjson:1.2.32",
+                "org.mybatis:mybatis:3.4.6",
+                "org.apache.commons:commons-lang3:3.4",
+                "javax.persistence:persistence-api:1.0",
+                "org.slf4j:log4j-over-slf4j:1.7.25",
+                "org.mybatis.generator:mybatis-generator-core:1.3.2",
+//                "org.mybatis.spring.boot:mybatis-spring-boot-starter:2.0.1",
+                "com.alibaba:druid:1.1.10",
+                'org.apache.curator:curator-framework:4.0.1',
+                'org.apache.curator:curator-recipes:4.0.1',
+                'org.apache.dubbo:dubbo:2.7.0',
+                'mysql:mysql-connector-java:8.0.15'
+
+        )
+    }
+}
+
+
